@@ -1,51 +1,104 @@
 import 'dart:convert';
 
 class AlertModel {
+
   String symbol;
+
   double targetPrice;
-  String type; // "up" ou "down"
+
+  String type;
+
   bool triggered;
 
+  bool isActive;
+
   AlertModel({
+
     required this.symbol,
+
     required this.targetPrice,
+
     required this.type,
+
     this.triggered = false,
+
+    this.isActive = true,
   });
 
-  // 🔄 PARA JSON
+  // =========================
+  // TO JSON
+  // =========================
   Map<String, dynamic> toJson() {
+
     return {
+
       'symbol': symbol,
+
       'targetPrice': targetPrice,
+
       'type': type,
+
       'triggered': triggered,
+
+      'isActive': isActive,
     };
   }
 
-  // 🔄 DE JSON
-  factory AlertModel.fromJson(Map<String, dynamic> json) {
+  // =========================
+  // FROM JSON
+  // =========================
+  factory AlertModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+
     return AlertModel(
+
       symbol: json['symbol'],
-      targetPrice: (json['targetPrice'] as num).toDouble(),
+
+      targetPrice:
+          (json['targetPrice'] as num)
+              .toDouble(),
+
       type: json['type'],
-      triggered: json['triggered'] ?? false,
+
+      triggered:
+          json['triggered'] ?? false,
+
+      isActive:
+          json['isActive'] ?? true,
     );
   }
 
-  // 🔥 SALVAR LISTA
-  static String encode(List<AlertModel> alerts) {
+  // =========================
+  // ENCODE
+  // =========================
+  static String encode(
+    List<AlertModel> alerts,
+  ) {
+
     return jsonEncode(
-      alerts.map((a) => a.toJson()).toList(),
+
+      alerts.map((alert) {
+
+        return alert.toJson();
+
+      }).toList(),
     );
   }
 
-  // 🔥 CARREGAR LISTA
-  static List<AlertModel> decode(String data) {
-    final List decoded = jsonDecode(data);
+  // =========================
+  // DECODE
+  // =========================
+  static List<AlertModel> decode(
+    String alerts,
+  ) {
 
-    return decoded
-        .map((e) => AlertModel.fromJson(e))
-        .toList();
+    final decoded = jsonDecode(alerts);
+
+    return decoded.map<AlertModel>((item) {
+
+      return AlertModel.fromJson(item);
+
+    }).toList();
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:alertxpro_app/data/models/alert_model.dart';
+
+import '../../../data/models/alert_model.dart';
 
 class CreateAlertScreen extends StatefulWidget {
+
   final String symbol;
   final double currentPrice;
   final double changePercent;
@@ -14,216 +16,548 @@ class CreateAlertScreen extends StatefulWidget {
   });
 
   @override
-  State<CreateAlertScreen> createState() => _CreateAlertScreenState();
+  State<CreateAlertScreen> createState() =>
+      _CreateAlertScreenState();
 }
 
-class _CreateAlertScreenState extends State<CreateAlertScreen> {
-  final TextEditingController priceController = TextEditingController();
-  final TextEditingController messageController = TextEditingController();
+class _CreateAlertScreenState
+    extends State<CreateAlertScreen> {
 
-  String alertType = "up";
+  // =========================
+  // CONTROLLERS
+  // =========================
+  final TextEditingController
+      highController =
+      TextEditingController();
+
+  final TextEditingController
+      lowController =
+      TextEditingController();
+
+  // =========================
+  // SWITCHES
+  // =========================
+  bool enableHigh = true;
+  bool enableLow = false;
 
   @override
   Widget build(BuildContext context) {
-    final isUp = widget.changePercent >= 0;
+
+    final isUp =
+        widget.changePercent >= 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F1A),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0B0F1A),
-              Color(0xFF111827),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+
+      backgroundColor:
+          const Color(0xFF0B0F1A),
+
+      appBar: AppBar(
+
+        backgroundColor:
+            const Color(0xFF0B0F1A),
+
+        elevation: 0,
+
+        centerTitle: true,
+
+        title: const Text(
+
+          'Criar Alertas',
+
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                /// HEADER
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Spacer(),
-                    Text(
-                      widget.symbol,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
+      ),
 
-                const SizedBox(height: 20),
+      body: SingleChildScrollView(
 
-                /// PREÇO
-                Text(
-                  widget.currentPrice.toStringAsFixed(2),
-                  style: const TextStyle(
-                    fontSize: 36,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+        padding:
+            const EdgeInsets.all(16),
 
-                const SizedBox(height: 6),
+        child: Column(
 
-                /// VARIAÇÃO
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      isUp ? Icons.arrow_upward : Icons.arrow_downward,
-                      color: isUp ? Colors.green : Colors.red,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      "${isUp ? "+" : ""}${widget.changePercent.toStringAsFixed(2)}%",
-                      style: TextStyle(
-                        color: isUp ? Colors.green : Colors.red,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
 
-                const SizedBox(height: 30),
+          children: [
 
-                const Text(
-                  "Preço de alerta",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                ),
+            // =====================
+            // ATIVO
+            // =====================
+            Center(
+              child: Column(
+                children: [
 
-                const SizedBox(height: 12),
+                  Text(
 
-                /// INPUT
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: Colors.white.withOpacity(0.03),
-                    border: Border.all(
-                      color: Colors.blueAccent.withOpacity(0.7),
+                    widget.symbol,
+
+                    style: const TextStyle(
+
+                      fontSize: 28,
+
+                      fontWeight:
+                          FontWeight.bold,
+
+                      color: Colors.white,
                     ),
                   ),
-                  child: Row(
+
+                  const SizedBox(height: 10),
+
+                  Text(
+
+                    '\$${widget.currentPrice.toStringAsFixed(2)}',
+
+                    style: const TextStyle(
+
+                      fontSize: 36,
+
+                      fontWeight:
+                          FontWeight.bold,
+
+                      color: Colors.white,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+
+                    '${widget.changePercent.toStringAsFixed(2)}%',
+
+                    style: TextStyle(
+
+                      fontSize: 18,
+
+                      fontWeight:
+                          FontWeight.bold,
+
+                      color:
+                          isUp
+                              ? Colors.green
+                              : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // =====================
+            // ALERTA ALTA
+            // =====================
+            Container(
+
+              padding:
+                  const EdgeInsets.all(16),
+
+              decoration: BoxDecoration(
+
+                color:
+                    const Color(0xFF1A1F2B),
+
+                borderRadius:
+                    BorderRadius.circular(
+                  20,
+                ),
+              ),
+
+              child: Column(
+
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
+                children: [
+
+                  Row(
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: priceController,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                          ),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: "Digite o preço",
-                            hintStyle: TextStyle(color: Colors.grey),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.all(16),
-                          ),
+
+                      const Icon(
+
+                        Icons.arrow_upward,
+
+                        color: Colors.green,
+
+                        size: 26,
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      const Text(
+
+                        'Alerta de Alta',
+
+                        style: TextStyle(
+
+                          fontSize: 18,
+
+                          fontWeight:
+                              FontWeight.bold,
+
+                          color: Colors.white,
                         ),
                       ),
 
-                      Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () => setState(() => alertType = "up"),
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Icon(
-                                Icons.arrow_upward,
-                                color: alertType == "up"
-                                    ? Colors.green
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => setState(() => alertType = "down"),
-                            child: Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Icon(
-                                Icons.arrow_downward,
-                                color: alertType == "down"
-                                    ? Colors.red
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ],
+                      const Spacer(),
+
+                      Switch(
+
+                        value: enableHigh,
+
+                        onChanged: (value) {
+
+                          setState(() {
+
+                            enableHigh =
+                                value;
+                          });
+                        },
                       ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                /// MENSAGEM
-                TextField(
-                  controller: messageController,
-                  maxLength: 200,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: "Mensagem opcional...",
-                    hintStyle: const TextStyle(color: Colors.grey),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  TextField(
+
+                    controller:
+                        highController,
+
+                    enabled: enableHigh,
+
+                    keyboardType:
+                        const TextInputType
+                            .numberWithOptions(
+                      decimal: true,
+                    ),
+
+                    style: const TextStyle(
+
+                      color: Colors.white,
+
+                      fontSize: 16,
+                    ),
+
+                    decoration:
+                        InputDecoration(
+
+                      hintText:
+                          'Preço de alta',
+
+                      hintStyle:
+                          const TextStyle(
+
+                        color:
+                            Colors.white54,
+                      ),
+
+                      filled: true,
+
+                      fillColor:
+                          const Color(
+                        0xFF111827,
+                      ),
+
+                      enabledBorder:
+                          OutlineInputBorder(
+
+                        borderRadius:
+                            BorderRadius.circular(
+                          14,
+                        ),
+
+                        borderSide:
+                            const BorderSide(
+
+                          color:
+                              Colors.white12,
+                        ),
+                      ),
+
+                      focusedBorder:
+                          OutlineInputBorder(
+
+                        borderRadius:
+                            BorderRadius.circular(
+                          14,
+                        ),
+
+                        borderSide:
+                            const BorderSide(
+
+                          color:
+                              Colors.green,
+
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-
-                const Spacer(),
-
-                /// BOTÃO CRIAR
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(18),
-                      backgroundColor: Colors.blue,
-                    ),
-                    onPressed: () {
-                      final text = priceController.text;
-
-                      if (text.isEmpty) return;
-
-                      final price = double.tryParse(text);
-                      if (price == null) return;
-
-                      final alert = AlertModel(
-                        symbol: widget.symbol,
-                        targetPrice: price,
-                        type: alertType,
-                      );
-
-                      Navigator.pop(context, alert);
-                    },
-                    child: const Text(
-                      "Criar alerta",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+
+            const SizedBox(height: 20),
+
+            // =====================
+            // ALERTA BAIXA
+            // =====================
+            Container(
+
+              padding:
+                  const EdgeInsets.all(16),
+
+              decoration: BoxDecoration(
+
+                color:
+                    const Color(0xFF1A1F2B),
+
+                borderRadius:
+                    BorderRadius.circular(
+                  20,
+                ),
+              ),
+
+              child: Column(
+
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+
+                children: [
+
+                  Row(
+                    children: [
+
+                      const Icon(
+
+                        Icons.arrow_downward,
+
+                        color: Colors.red,
+
+                        size: 26,
+                      ),
+
+                      const SizedBox(width: 10),
+
+                      const Text(
+
+                        'Alerta de Baixa',
+
+                        style: TextStyle(
+
+                          fontSize: 18,
+
+                          fontWeight:
+                              FontWeight.bold,
+
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      Switch(
+
+                        value: enableLow,
+
+                        onChanged: (value) {
+
+                          setState(() {
+
+                            enableLow =
+                                value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+
+                    controller:
+                        lowController,
+
+                    enabled: enableLow,
+
+                    keyboardType:
+                        const TextInputType
+                            .numberWithOptions(
+                      decimal: true,
+                    ),
+
+                    style: const TextStyle(
+
+                      color: Colors.white,
+
+                      fontSize: 16,
+                    ),
+
+                    decoration:
+                        InputDecoration(
+
+                      hintText:
+                          'Preço de baixa',
+
+                      hintStyle:
+                          const TextStyle(
+
+                        color:
+                            Colors.white54,
+                      ),
+
+                      filled: true,
+
+                      fillColor:
+                          const Color(
+                        0xFF111827,
+                      ),
+
+                      enabledBorder:
+                          OutlineInputBorder(
+
+                        borderRadius:
+                            BorderRadius.circular(
+                          14,
+                        ),
+
+                        borderSide:
+                            const BorderSide(
+
+                          color:
+                              Colors.white12,
+                        ),
+                      ),
+
+                      focusedBorder:
+                          OutlineInputBorder(
+
+                        borderRadius:
+                            BorderRadius.circular(
+                          14,
+                        ),
+
+                        borderSide:
+                            const BorderSide(
+
+                          color:
+                              Colors.red,
+
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            // =====================
+            // BOTÃO
+            // =====================
+            SizedBox(
+
+              width: double.infinity,
+
+              child: ElevatedButton(
+
+                style:
+                    ElevatedButton.styleFrom(
+
+                  backgroundColor:
+                      Colors.green,
+
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
+                    vertical: 18,
+                  ),
+
+                  shape:
+                      RoundedRectangleBorder(
+
+                    borderRadius:
+                        BorderRadius.circular(
+                      18,
+                    ),
+                  ),
+                ),
+
+                onPressed: () {
+
+                  double? highPrice;
+                  double? lowPrice;
+
+                  if (enableHigh &&
+                      highController
+                          .text
+                          .isNotEmpty) {
+
+                    highPrice =
+                        double.tryParse(
+                      highController.text,
+                    );
+                  }
+
+                  if (enableLow &&
+                      lowController
+                          .text
+                          .isNotEmpty) {
+
+                    lowPrice =
+                        double.tryParse(
+                      lowController.text,
+                    );
+                  }
+
+                  final alert =
+                      AlertModel(
+
+                    symbol:
+                        widget.symbol,
+
+                    highPrice:
+                        highPrice,
+
+                    highEnabled:
+                        enableHigh,
+
+                    lowPrice:
+                        lowPrice,
+
+                    lowEnabled:
+                        enableLow,
+                  );
+
+                  Navigator.pop(
+                    context,
+                    alert,
+                  );
+                },
+
+                child: const Text(
+
+                  'Salvar Alertas',
+
+                  style: TextStyle(
+
+                    fontSize: 18,
+
+                    fontWeight:
+                        FontWeight.bold,
+
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

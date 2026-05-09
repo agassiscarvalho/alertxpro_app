@@ -1,66 +1,78 @@
-import 'package:alertxpro_app/data/models/alert_model.dart';
+import '../../data/models/alert_model.dart';
 import 'notification_service.dart';
 
 class AlertService {
-  double? previousPrice;
 
-  void checkAlerts(double currentPrice, List<AlertModel> alerts) {
-    if (previousPrice == null) {
-      previousPrice = currentPrice;
-      return;
-    }
+  // =========================
+  // VERIFICA ALERTAS
+  // =========================
+  void checkAlerts(
+    double previousPrice,
+    double currentPrice,
+    List<AlertModel> alerts,
+  ) {
 
-    for (var alert in alerts) {
-      if (alert.triggered) continue;
+    for (final alert in alerts) {
 
-      double tolerance = _getTolerance(alert.symbol);
+      // =========================
+      // ROMPIMENTO ALTA
+      // =========================
+      if (
 
-      bool isAbove = currentPrice > alert.targetPrice;
-      bool isBelow = currentPrice < alert.targetPrice;
+          alert.highPrice != null &&
+          alert.highEnabled &&
+          !alert.highTriggered &&
 
-      bool wasAbove = previousPrice! > alert.targetPrice;
-      bool wasBelow = previousPrice! < alert.targetPrice;
+          previousPrice <
+              alert.highPrice! &&
 
-      // 🔥 ROMPIMENTO REAL PRA CIMA
-      bool breakoutUp = wasBelow && isAbove;
+          currentPrice >=
+              alert.highPrice!
+      ) {
 
-      // 🔥 ROMPIMENTO REAL PRA BAIXO
-      bool breakoutDown = wasAbove && isBelow;
+        alert.highTriggered = true;
 
-      // 🔥 TOQUE NO PREÇO (PRECISO)
-      bool touch =
-          (currentPrice - alert.targetPrice).abs() <= tolerance;
+        // DESLIGA SWITCH
+        alert.highEnabled = false;
 
-      if (alert.type == "up") {
-        if (breakoutUp || touch) {
-          _triggerAlert(alert, currentPrice);
-          break;
-        }
+        NotificationService.showNotification(
+
+          'ALERTA DE ALTA',
+
+          '${alert.symbol} rompeu '
+          '${alert.highPrice}',
+        );
       }
 
-      if (alert.type == "down") {
-        if (breakoutDown || touch) {
-          _triggerAlert(alert, currentPrice);
-          break;
-        }
+      // =========================
+      // ROMPIMENTO BAIXA
+      // =========================
+      if (
+
+          alert.lowPrice != null &&
+          alert.lowEnabled &&
+          !alert.lowTriggered &&
+
+          previousPrice >
+              alert.lowPrice! &&
+
+          currentPrice <=
+              alert.lowPrice!
+      ) {
+
+        alert.lowTriggered = true;
+
+        // DESLIGA SWITCH
+        alert.lowEnabled = false;
+
+        NotificationService.showNotification(
+
+          'ALERTA DE BAIXA',
+
+          '${alert.symbol} perdeu '
+          '${alert.lowPrice}',
+        );
       }
     }
-
-    previousPrice = currentPrice;
-  }
-
-  void _triggerAlert(AlertModel alert, double price) {
-    alert.triggered = true;
-
-    NotificationService.showNotification(
-      "🚨 ${alert.symbol}",
-      "Alvo: ${alert.targetPrice} | Atual: $price",
-    );
-  }
-
-  double _getTolerance(String symbol) {
-    if (symbol.contains("BTC")) return 5.0;
-    if (symbol.contains("ETH")) return 0.5;
-    return 0.01;
   }
 }

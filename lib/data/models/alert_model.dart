@@ -1,63 +1,131 @@
 import 'dart:convert';
 
 class AlertModel {
-  String symbol;
-  double targetPrice;
-  String type; // "up" ou "down"
-  bool triggered;
 
+  // =========================
+  // ATIVO
+  // =========================
+  String symbol;
+
+  // =========================
+  // ALERTA ALTA
+  // =========================
+  double? highPrice;
+
+  bool highEnabled;
+
+  bool highTriggered;
+
+  // =========================
+  // ALERTA BAIXA
+  // =========================
+  double? lowPrice;
+
+  bool lowEnabled;
+
+  bool lowTriggered;
+
+  // =========================
+  // CONSTRUTOR
+  // =========================
   AlertModel({
+
     required this.symbol,
-    required this.targetPrice,
-    required this.type,
-    this.triggered = false,
+
+    this.highPrice,
+    this.highEnabled = false,
+    this.highTriggered = false,
+
+    this.lowPrice,
+    this.lowEnabled = false,
+    this.lowTriggered = false,
   });
 
-  /// 🔹 CRIAR A PARTIR DO JSON
-  factory AlertModel.fromJson(Map<String, dynamic> json) {
-    return AlertModel(
-      symbol: json['symbol'] ?? '',
-      targetPrice: (json['targetPrice'] as num?)?.toDouble() ?? 0.0,
-      type: json['type'] ?? 'up',
-      triggered: json['triggered'] ?? false,
-    );
-  }
-
-  /// 🔹 CONVERTER PARA JSON
+  // =========================
+  // TO JSON
+  // =========================
   Map<String, dynamic> toJson() {
+
     return {
+
       'symbol': symbol,
-      'targetPrice': targetPrice,
-      'type': type,
-      'triggered': triggered,
+
+      'highPrice': highPrice,
+      'highEnabled': highEnabled,
+      'highTriggered': highTriggered,
+
+      'lowPrice': lowPrice,
+      'lowEnabled': lowEnabled,
+      'lowTriggered': lowTriggered,
     };
   }
 
-  /// 🔥 SALVAR LISTA
-  static String encode(List<AlertModel> alerts) {
-    return jsonEncode(
-      alerts.map((a) => a.toJson()).toList(),
+  // =========================
+  // FROM JSON
+  // =========================
+  factory AlertModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+
+    return AlertModel(
+
+      symbol: json['symbol'],
+
+      highPrice:
+          json['highPrice'] != null
+              ? (json['highPrice'] as num)
+                  .toDouble()
+              : null,
+
+      highEnabled:
+          json['highEnabled'] ?? false,
+
+      highTriggered:
+          json['highTriggered'] ?? false,
+
+      lowPrice:
+          json['lowPrice'] != null
+              ? (json['lowPrice'] as num)
+                  .toDouble()
+              : null,
+
+      lowEnabled:
+          json['lowEnabled'] ?? false,
+
+      lowTriggered:
+          json['lowTriggered'] ?? false,
     );
   }
 
-  /// 🔥 CARREGAR LISTA (RESISTENTE A ERROS)
-  static List<AlertModel> decode(String data) {
-    try {
-      final decoded = jsonDecode(data);
+  // =========================
+  // ENCODE LIST
+  // =========================
+  static String encode(
+    List<AlertModel> alerts,
+  ) {
 
-      if (decoded is List) {
-        return decoded
-            .map<AlertModel>((e) => AlertModel.fromJson(e))
-            .toList();
-      }
+    return jsonEncode(
 
-      if (decoded is Map<String, dynamic>) {
-        return [AlertModel.fromJson(decoded)];
-      }
+      alerts.map(
+        (alert) => alert.toJson(),
+      ).toList(),
+    );
+  }
 
-      return [];
-    } catch (e) {
-      return [];
-    }
+  // =========================
+  // DECODE LIST
+  // =========================
+  static List<AlertModel> decode(
+    String alerts,
+  ) {
+
+    final List decoded =
+        jsonDecode(alerts);
+
+    return decoded.map((item) {
+
+      return AlertModel.fromJson(item);
+
+    }).toList();
   }
 }
