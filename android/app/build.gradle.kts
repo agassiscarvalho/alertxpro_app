@@ -2,21 +2,22 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+
+    // FIREBASE
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "dev.agassis.alertxpro.alertxpro_app"
 
-    // 🔥 ATUALIZADO (OBRIGATÓRIO)
+    // ANDROID SDK
     compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.agassis.alertxpro.alertxpro_app"
 
-        // 👇 IMPORTANTE (mínimo recomendado pro plugin)
         minSdk = flutter.minSdkVersion
 
-        // 🔥 ATUALIZADO
         targetSdk = 36
 
         versionCode = 1
@@ -25,6 +26,7 @@ android {
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
+
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -41,6 +43,7 @@ android {
 }
 
 dependencies {
+    // DESUGAR
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 

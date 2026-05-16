@@ -1,101 +1,124 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notifications =
-      FlutterLocalNotificationsPlugin();
 
-  static const String _channelId = 'alert_channel';
-  static const String _channelName = 'Alertas de Preço';
+  static final FlutterLocalNotificationsPlugin
+      _notifications = FlutterLocalNotificationsPlugin();
 
-  // 🔥 INIT COMPLETO
+  // =====================================================
+  // CHANNEL
+  // =====================================================
+  static const AndroidNotificationChannel _channel =
+      AndroidNotificationChannel(
+    'alert_channel',
+    'Alertas de Preço',
+    description: 'Canal de alertas do Alertx Pro',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
+
+  // =====================================================
+  // INIT
+  // =====================================================
   static Future<void> init() async {
-    const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initSettings =
-        InitializationSettings(android: androidInit);
+    // ANDROID INIT
+    const AndroidInitializationSettings androidSettings =
+        AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
 
-    await _notifications.initialize(initSettings);
+    const InitializationSettings settings =
+        InitializationSettings(
+      android: androidSettings,
+    );
 
-    await _requestPermission(); // 🔥 NOVO
+    // INIT PLUGIN
+    await _notifications.initialize(settings);
+
+    // PERMISSÃO
+    await _requestPermission();
+
+    // CANAL
     await _createChannel();
   }
 
-  // 🔥 PERMISSÃO ANDROID 13+
+  // =====================================================
+  // PERMISSÃO
+  // =====================================================
   static Future<void> _requestPermission() async {
-    final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<
+
+    final androidPlugin =
+        _notifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     await androidPlugin?.requestNotificationsPermission();
   }
 
-  // 🔥 CANAL
+  // =====================================================
+  // CREATE CHANNEL
+  // =====================================================
   static Future<void> _createChannel() async {
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      _channelId,
-      _channelName,
-      description: 'Canal para alertas de preço',
-      importance: Importance.max,
-    );
 
-    final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<
+    final androidPlugin =
+        _notifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidPlugin?.createNotificationChannel(channel);
-  }
-
-  // 🔔 NOTIFICAÇÃO PADRÃO
-  static Future<void> showNotification(
-    String title,
-    String body,
-  ) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: 'Canal para alertas de preço',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-    );
-
-    const NotificationDetails details =
-        NotificationDetails(android: androidDetails);
-
-    await _notifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      details,
+    await androidPlugin?.createNotificationChannel(
+      _channel,
     );
   }
 
-  // 🚨 ALERTA FORTE
-  static Future<void> showAlertNotification(
-    String title,
-    String body,
-  ) async {
+  // =====================================================
+  // SHOW NOTIFICATION
+  // =====================================================
+  static Future<void> showNotification({
+    required String title,
+    required String body,
+  }) async {
+
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: 'Canal para alertas de preço',
+      'alert_channel',
+      'Alertas de Preço',
+
+      channelDescription:
+          'Canal de alertas do Alertx Pro',
+
       importance: Importance.max,
       priority: Priority.high,
+
       playSound: true,
       enableVibration: true,
+
+      ticker: 'ticker',
     );
 
     const NotificationDetails details =
-        NotificationDetails(android: androidDetails);
+        NotificationDetails(
+      android: androidDetails,
+    );
 
     await _notifications.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
       details,
+    );
+  }
+
+  // =====================================================
+  // ALERTA FORTE
+  // =====================================================
+  static Future<void> showAlertNotification({
+    required String title,
+    required String body,
+  }) async {
+
+    await showNotification(
+      title: title,
+      body: body,
     );
   }
 }
