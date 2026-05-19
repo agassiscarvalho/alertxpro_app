@@ -1,11 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/services/alert_service.dart';
 import '../../../core/services/binance_service.dart';
-import '../../../core/services/notification_service.dart';
+import '../../../core/services/binance_websocket_service.dart';
 
 import '../../../data/models/alert_model.dart';
 
@@ -16,12 +14,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() =>
-      _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState
-    extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> {
 
   // =========================
   // SERVICES
@@ -29,13 +25,12 @@ class _HomeScreenState
   final BinanceService _binanceService =
       BinanceService();
 
+  final BinanceWebSocketService
+      _webSocketService =
+          BinanceWebSocketService();
+
   final AlertService _alertService =
       AlertService();
-
-  // =========================
-  // TIMER
-  // =========================
-  Timer? _timer;
 
   // =========================
   // ATIVOS
@@ -43,7 +38,6 @@ class _HomeScreenState
   String selectedSymbol = 'BTCUSDT';
 
   final List<String> symbols = [
-
     'BTCUSDT',
     'ETHUSDT',
     'SOLUSDT',
@@ -66,46 +60,57 @@ class _HomeScreenState
 
   @override
   void initState() {
-
     super.initState();
 
     _loadAlerts();
 
-    _startRealtime();
+    _loadDailyChange();
+
+    _startWebSocket();
   }
 
   // =========================
-  // TEMPO REAL
+  // WEBSOCKET
   // =========================
-  void _startRealtime() {
+  void _startWebSocket() {
 
-    _loadPrice();
+    _webSocketService.disconnect();
 
-    _timer?.cancel();
+    _webSocketService.connect(
 
-    _timer = Timer.periodic(
+      symbol: selectedSymbol,
 
-      const Duration(seconds: 2),
+      onPriceUpdate: (price) {
 
-      (_) {
+        if (!mounted) return;
 
-        _loadPrice();
+        setState(() {
+
+          previousPrice =
+              currentPrice;
+
+          currentPrice = price;
+        });
+
+        _alertService.checkAlerts(
+
+          previousPrice,
+
+          currentPrice,
+
+          alerts,
+        );
       },
     );
   }
 
   // =========================
-  // BUSCA PREÇO
+  // VARIAÇÃO 24H
   // =========================
-  Future<void> _loadPrice()
+  Future<void> _loadDailyChange()
   async {
 
     try {
-
-      final price =
-          await _binanceService.fetchPrice(
-        selectedSymbol,
-      );
 
       final change =
           await _binanceService
@@ -117,23 +122,8 @@ class _HomeScreenState
 
       setState(() {
 
-        previousPrice = currentPrice;
-
-        currentPrice = price;
-
         dailyChange = change;
       });
-
-      _alertService.checkAlerts(
-
-        previousPrice,
-
-        currentPrice,
-
-        alerts,
-      );
-
-      _saveAlerts();
 
     } catch (e) {
 
@@ -280,7 +270,7 @@ class _HomeScreenState
   }
 
   // =========================
-  // EXCLUIR
+  // EXCLUIR ALERTA
   // =========================
   void _deleteAlert(
     int index,
@@ -297,7 +287,7 @@ class _HomeScreenState
   @override
   void dispose() {
 
-    _timer?.cancel();
+    _webSocketService.disconnect();
 
     super.dispose();
   }
@@ -434,15 +424,21 @@ class _HomeScreenState
 
                 }).toList(),
 
-                onChanged: (value) {
+                onChanged: (value) async {
 
                   setState(() {
 
                     selectedSymbol =
                         value!;
+
+                    currentPrice = 0;
+
+                    previousPrice = 0;
                   });
 
-                  _loadPrice();
+                  await _loadDailyChange();
+
+                  _startWebSocket();
                 },
               ),
             ),
@@ -450,7 +446,7 @@ class _HomeScreenState
             const SizedBox(height: 18),
 
             // =====================
-            // PREÇO
+            // CARD PREÇO
             // =====================
             PriceCard(
 
@@ -522,7 +518,6 @@ class _HomeScreenState
 
                             children: [
 
-                              // HEADER
                               Row(
                                 children: [
 
@@ -572,7 +567,6 @@ class _HomeScreenState
                                     Colors.white10,
                               ),
 
-                              // ALTA
                               if (alert.highPrice !=
                                   null)
 
@@ -606,7 +600,6 @@ class _HomeScreenState
                                   },
                                 ),
 
-                              // BAIXA
                               if (alert.lowPrice !=
                                   null)
 
@@ -639,24 +632,6 @@ class _HomeScreenState
                                     );
                                   },
                                 ),
-
-                              const SizedBox(
-                                height: 10,
-                              ),
-
-                              Text(
-
-                                'Preço atual: \$${currentPrice.toStringAsFixed(2)}',
-
-                                style:
-                                    const TextStyle(
-
-                                  color:
-                                      Colors.white70,
-
-                                  fontSize: 14,
-                                ),
-                              ),
                             ],
                           ),
                         );
