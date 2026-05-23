@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../../data/models/alert_model.dart';
+import '../../../core/services/backend_service.dart';
 
 class CreateAlertScreen extends StatefulWidget {
-
   final String symbol;
   final double currentPrice;
   final double changePercent;
@@ -39,6 +40,18 @@ class _CreateAlertScreenState
   // =========================
   bool enableHigh = true;
   bool enableLow = false;
+
+  // =========================
+  // LOADING
+  // =========================
+  bool isLoading = false;
+
+  @override
+  void dispose() {
+    highController.dispose();
+    lowController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -489,7 +502,22 @@ class _CreateAlertScreenState
                   ),
                 ),
 
-                onPressed: () {
+                onPressed: () async {
+
+                  if (!enableHigh &&
+                      !enableLow) {
+
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Ative pelo menos um alerta.',
+                        ),
+                      ),
+                    );
+
+                    return;
+                  }
 
                   double? highPrice;
                   double? lowPrice;
@@ -516,45 +544,144 @@ class _CreateAlertScreenState
                     );
                   }
 
-                  final alert =
-                      AlertModel(
+                  if (highPrice == null &&
+                      lowPrice == null) {
 
-                    symbol:
-                        widget.symbol,
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Digite um preço válido.',
+                        ),
+                      ),
+                    );
 
-                    highPrice:
-                        highPrice,
+                    return;
+                  }
 
-                    highEnabled:
-                        enableHigh,
+                  setState(() {
+                    isLoading = true;
+                  });
 
-                    lowPrice:
-                        lowPrice,
+                  try {
 
-                    lowEnabled:
-                        enableLow,
-                  );
+                    final fcmToken =
+                        await FirebaseMessaging
+                            .instance
+                            .getToken();
 
-                  Navigator.pop(
-                    context,
-                    alert,
-                  );
+                    if (highPrice != null) {
+
+                      await BackendService
+                          .createAlert(
+                        symbol:
+                            widget.symbol,
+                        price:
+                            highPrice,
+                        type: 'high',
+                        fcmToken:
+                            fcmToken ?? '',
+                      );
+                    }
+
+                    if (lowPrice != null) {
+
+                      await BackendService
+                          .createAlert(
+                        symbol:
+                            widget.symbol,
+                        price:
+                            lowPrice,
+                        type: 'low',
+                        fcmToken:
+                            fcmToken ?? '',
+                      );
+                    }
+
+                    final alert =
+                        AlertModel(
+
+                      symbol:
+                          widget.symbol,
+
+                      highPrice:
+                          highPrice,
+
+                      highEnabled:
+                          enableHigh,
+
+                      lowPrice:
+                          lowPrice,
+
+                      lowEnabled:
+                          enableLow,
+                    );
+
+                    if (mounted) {
+
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Alerta salvo com sucesso!',
+                          ),
+                        ),
+                      );
+
+                      Navigator.pop(
+                        context,
+                        alert,
+                      );
+                    }
+
+                  } catch (e) {
+
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Erro ao salvar alerta: $e',
+                        ),
+                      ),
+                    );
+
+                  } finally {
+
+                    if (mounted) {
+
+                      setState(() {
+                        isLoading = false;
+                      });
+                    }
+                  }
                 },
 
-                child: const Text(
+                child: isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child:
+                            CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
 
-                  'Salvar Alertas',
+                        'Salvar Alertas',
 
-                  style: TextStyle(
+                        style: TextStyle(
 
-                    fontSize: 18,
+                          fontSize: 18,
 
-                    fontWeight:
-                        FontWeight.bold,
+                          fontWeight:
+                              FontWeight.bold,
 
-                    color: Colors.white,
-                  ),
-                ),
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
           ],

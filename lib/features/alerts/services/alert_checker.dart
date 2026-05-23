@@ -1,8 +1,8 @@
 import 'dart:async';
-import '../../data/datasources/remote/binance_api.dart';
-import '../../data/datasources/local/local_storage.dart';
-import '../../data/models/alert_model.dart';
-import '../../core/services/notification_service.dart';
+import '../../../data/datasources/remote/binance_api.dart';
+import '../../../data/datasources/local/local_storage.dart';
+import '../../../data/models/alert_model.dart';
+import '../../../core/services/notification_service.dart';
 
 class AlertChecker {
   Timer? _timer;
