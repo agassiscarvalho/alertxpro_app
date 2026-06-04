@@ -1,4 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -17,8 +19,41 @@ class NotificationService {
 
     await _notifications.initialize(initSettings);
 
-    await _requestPermission(); // 🔥 NOVO
+    await _requestPermission();
     await _createChannel();
+
+    // 🔥 Firebase Messaging
+    await _initializeFirebaseMessaging();
+  }
+
+  // 🔥 FIREBASE MESSAGING
+  static Future<void> _initializeFirebaseMessaging() async {
+    final messaging = FirebaseMessaging.instance;
+
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    final token = await messaging.getToken();
+
+    debugPrint('');
+    debugPrint('==========================');
+    debugPrint('FCM TOKEN: $token');
+    debugPrint('==========================');
+    debugPrint('');
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('Mensagem recebida em foreground');
+
+      if (message.notification != null) {
+        showNotification(
+          message.notification!.title ?? 'Alertx Pro',
+          message.notification!.body ?? '',
+        );
+      }
+    });
   }
 
   // 🔥 PERMISSÃO ANDROID 13+
