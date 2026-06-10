@@ -20,19 +20,17 @@ class LocalStorage {
   }
 
   // 🔥 ESSENCIAL
-  static Future<void> updateAlert(AlertModel updated) async {
-    final alerts = await loadAlerts();
+static Future<void> updateAlert(AlertModel updated) async {
+  final alerts = await loadAlerts();
 
-    final index = alerts.indexWhere(
-      (a) =>
-          a.symbol == updated.symbol &&
-          a.targetPrice == updated.targetPrice,
-    );
+  final index = alerts.indexWhere(
+    (a) => a.symbol == updated.symbol,
+  );
 
-    if (index != -1) {
-      alerts[index] = updated;
-    }
-
-    await saveAlerts(alerts);
+  if (index != -1) {
+    alerts[index] = updated;
   }
+
+  await saveAlerts(alerts);
+}
 }

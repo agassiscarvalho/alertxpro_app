@@ -133,4 +133,9 @@ class NotificationService {
       details,
     );
   }
+
+  // 🔥 RETORNA TOKEN FCM
+  static Future<String?> getFcmToken() async {
+    return await FirebaseMessaging.instance.getToken();
+  }
 }

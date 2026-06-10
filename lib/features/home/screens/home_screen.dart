@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/services/alert_service.dart';
 import '../../../core/services/binance_service.dart';
-import '../../../core/services/notification_service.dart';
 
 import '../../../data/models/alert_model.dart';
 

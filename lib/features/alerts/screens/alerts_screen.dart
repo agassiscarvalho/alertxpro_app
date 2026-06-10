@@ -1,3 +1,4 @@
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -99,10 +100,10 @@ class _AlertsScreenState extends State<AlertsScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
             child: Column(
@@ -143,7 +144,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 Text(
                   "Preço atual: --",
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 13,
                   ),
                 ),
@@ -153,7 +154,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
                 Text(
                   "Última atualização: --",
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     fontSize: 11,
                   ),
                 ),
@@ -169,8 +170,11 @@ class _AlertsScreenState extends State<AlertsScreen> {
   // 🔥 SWITCH CUSTOM (IGUAL APP)
   // =========================
   Widget _buildRow(AlertModel alert, {required bool isUp}) {
-    final isActive =
-        (alert.type == (isUp ? "up" : "down")) && !alert.triggered;
+    final bool isActive =
+        isUp ? alert.highEnabled : alert.lowEnabled;
+
+    final double? targetPrice =
+        isUp ? alert.highPrice : alert.lowPrice;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -187,7 +191,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             Text(
               isUp ? "Alta" : "Baixa",
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 14,
               ),
             ),
@@ -197,7 +201,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         Row(
           children: [
             Text(
-              alert.targetPrice.toString(),
+              targetPrice?.toString() ?? '--',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -209,11 +213,20 @@ class _AlertsScreenState extends State<AlertsScreen> {
             // SWITCH CUSTOM
             GestureDetector(
               onTap: () async {
-                if (isActive) {
-                  alert.triggered = true;
+                if (isUp) {
+                  alert.highEnabled =
+                      !alert.highEnabled;
+
+                  if (alert.highEnabled) {
+                    alert.highTriggered = false;
+                  }
                 } else {
-                  alert.type = isUp ? "up" : "down";
-                  alert.triggered = false;
+                  alert.lowEnabled =
+                      !alert.lowEnabled;
+
+                  if (alert.lowEnabled) {
+                    alert.lowTriggered = false;
+                  }
                 }
 
                 await _updateAlert(alert);
@@ -251,3 +264,4 @@ class _AlertsScreenState extends State<AlertsScreen> {
     );
   }
 }
+
