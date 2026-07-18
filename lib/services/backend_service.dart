@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class BackendService {
 
   static const String baseUrl =
-      'http://10.0.0.101:3000';
+      'https://unhelpful-professed-engraver.ngrok-free.dev/api';
 
   static Future<bool> createAlert({
     required String symbol,

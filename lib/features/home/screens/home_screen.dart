@@ -24,16 +24,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Timer? _timer;
   String selectedSymbol = 'BTCUSDT';
-  final List<String> symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT'];
+  final List<String> symbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'BNBUSDT'];
 
   double currentPrice = 0;
   double previousPrice = 0;
   double dailyChange = 0;
 
   List<AlertModel> alerts = [];
+  int _currentIndex = 0;
   
   // Variável para guardar o token do Firebase
   String? _fcmToken;
+
+  // ==========================================
+  // FUNÇÃO AUXILIAR DE PRECISÃO DINÂMICA
+  // ==========================================
+  String _formatPrice(double price, String symbol) {
+    if (symbol.toUpperCase().contains('XRP') || price < 10) {
+      return '\$${price.toStringAsFixed(4)}';
+    } else {
+      return '\$${price.toStringAsFixed(2)}';
+    }
+  }
 
   @override
   void initState() {
@@ -53,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final token = await NotificationService.getFcmToken();
       setState(() {
-        _fcmToken = token; // Salva o token na inicialização
+        _fcmToken = token;
       });
       debugPrint("🔥 FCM TOKEN: $token");
     } catch (e) {
@@ -74,8 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
         dailyChange = change;
       });
 
-      // NOTA: O checkAlerts local pode continuar aqui apenas para o usuário
-      // ver o alerta "Disparar" visualmente na tela se ele estiver com o app aberto.
       _alertService.checkAlerts(previousPrice, currentPrice, alerts);
       _saveAlerts();
     } catch (e) {
@@ -98,9 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // MODIFICADO: Agora envia os dados para o seu BackendService
   Future<void> _addAlert(AlertModel alert) async {
-    // 1. Salva na interface/local
     final existingIndex = alerts.indexWhere((a) => a.symbol == alert.symbol);
 
     if (existingIndex != -1) {
@@ -122,14 +130,16 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
     _saveAlerts();
 
-    // 2. Envia para o Servidor Node.js se o token existir
-    if (_fcmToken != null) {
+    // --- CORREÇÃO DO SALVAMENTO DO TOKEN ---
+    String? tokenEnvio = _fcmToken ?? await NotificationService.getFcmToken();
+
+    if (tokenEnvio != null) {
       if (alert.highPrice != null) {
         await BackendService.createAlert(
           symbol: alert.symbol,
           price: alert.highPrice!,
           type: 'high',
-          fcmToken: _fcmToken!,
+          fcmToken: tokenEnvio,
         );
       }
       if (alert.lowPrice != null) {
@@ -137,11 +147,11 @@ class _HomeScreenState extends State<HomeScreen> {
           symbol: alert.symbol,
           price: alert.lowPrice!,
           type: 'low',
-          fcmToken: _fcmToken!,
+          fcmToken: tokenEnvio,
         );
       }
     } else {
-      debugPrint("⚠️ Não foi possível enviar ao servidor: FCM Token nulo.");
+      debugPrint("⚠️ Não foi possível enviar ao servidor: FCM Token continua nulo no dispositivo.");
     }
   }
 
@@ -168,133 +178,268 @@ class _HomeScreenState extends State<HomeScreen> {
     _saveAlerts();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  Future<void> _navigateToCreateAlert() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CreateAlertScreen(
+          symbol: selectedSymbol,
+          currentPrice: currentPrice,
+          changePercent: dailyChange,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      _addAlert(result);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0E1117),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0E1117),
-        elevation: 0,
-        centerTitle: true,
-        title: const Text('ALERTAS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add, color: Colors.white),
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => CreateAlertScreen(
-                symbol: selectedSymbol,
-                currentPrice: currentPrice,
-                changePercent: dailyChange,
-              ),
-            ),
-          );
+    const appBgColor = Color(0xFF0D1424); 
 
-          if (result != null) {
-            _addAlert(result);
-          }
-        },
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1F2B),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: DropdownButton<String>(
-                dropdownColor: const Color(0xFF1A1F2B),
-                value: selectedSymbol,
-                isExpanded: true,
-                underline: const SizedBox(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                items: symbols.map((symbol) {
-                  return DropdownMenuItem(value: symbol, child: Text(symbol));
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedSymbol = value!;
-                  });
-                  _loadPrice();
-                },
-              ),
-            ),
-            const SizedBox(height: 18),
-            PriceCard(
-              symbol: selectedSymbol,
-              price: currentPrice,
-              dailyChange: dailyChange,
-            ),
-            const SizedBox(height: 18),
-            Expanded(
-              child: alerts.isEmpty
-                  ? const Center(child: Text('Nenhum alerta criado', style: TextStyle(color: Colors.white70)))
-                  : ListView.builder(
-                      itemCount: alerts.length,
-                      itemBuilder: (_, index) {
-                        final alert = alerts[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A1F2B),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Text(alert.symbol, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                  const Spacer(),
-                                  IconButton(
-                                    onPressed: () => _deleteAlert(index),
-                                    icon: const Icon(Icons.delete_outline, color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                              const Divider(color: Colors.white10),
-                              if (alert.highPrice != null)
-                                _buildAlertTile(
-                                  icon: Icons.arrow_upward,
-                                  iconColor: Colors.green,
-                                  title: 'Alta',
-                                  price: alert.highPrice!,
-                                  enabled: alert.highEnabled,
-                                  triggered: alert.highTriggered,
-                                  onChanged: (value) => _toggleHigh(alert, value),
-                                ),
-                              if (alert.lowPrice != null)
-                                _buildAlertTile(
-                                  icon: Icons.arrow_downward,
-                                  iconColor: Colors.red,
-                                  title: 'Baixa',
-                                  price: alert.lowPrice!,
-                                  enabled: alert.lowEnabled,
-                                  triggered: alert.lowTriggered,
-                                  onChanged: (value) => _toggleLow(alert, value),
-                                ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Preço atual: \$${currentPrice.toStringAsFixed(2)}',
-                                style: const TextStyle(color: Colors.white70, fontSize: 14),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+    return Scaffold(
+      backgroundColor: appBgColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. CABEÇALHO: Título do App e Ícone de Perfil
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'AlertX Pro',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 30),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // 2. IDENTIDADE: Boas-vindas
+              const Text(
+                'Olá,',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              const Text(
+                'Erlich Bachman',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Seletor de Ativos
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: DropdownButton<String>(
+                  dropdownColor: const Color(0xFF161F33),
+                  value: selectedSymbol,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  items: symbols.map((symbol) {
+                    return DropdownMenuItem(value: symbol, child: Text(symbol));
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      selectedSymbol = value!;
+                    });
+                    _loadPrice();
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Card de preço real
+              PriceCard(
+                symbol: selectedSymbol,
+                price: currentPrice,
+                dailyChange: dailyChange,
+              ),
+              const SizedBox(height: 16),
+
+              // 3. CONTEÚDO PRINCIPAL (Lista de Alertas ou o Botão Gigante)
+              Expanded(
+                child: alerts.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            GestureDetector(
+                              onTap: _navigateToCreateAlert,
+                              child: Container(
+                                width: 130,
+                                height: 130,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.06),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.04),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.add,
+                                  color: Colors.blue.shade400,
+                                  size: 55,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Adicionar Novo Alarme',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: alerts.length,
+                        itemBuilder: (_, index) {
+                          final alert = alerts[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.03),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(alert.symbol, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                    const Spacer(),
+                                    IconButton(
+                                      onPressed: () => _deleteAlert(index),
+                                      icon: const Icon(Icons.delete_outline, color: Colors.white60),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(color: Colors.white10),
+                                if (alert.highPrice != null)
+                                  _buildAlertTile(
+                                    icon: Icons.arrow_upward,
+                                    iconColor: Colors.green,
+                                    title: 'Alta',
+                                    price: alert.highPrice!,
+                                    symbol: alert.symbol,
+                                    enabled: alert.highEnabled,
+                                    triggered: alert.highTriggered,
+                                    onChanged: (value) => _toggleHigh(alert, value),
+                                  ),
+                                if (alert.lowPrice != null)
+                                  _buildAlertTile(
+                                    icon: Icons.arrow_downward,
+                                    iconColor: Colors.red,
+                                    title: 'Baixa',
+                                    price: alert.lowPrice!,
+                                    symbol: alert.symbol,
+                                    enabled: alert.lowEnabled,
+                                    triggered: alert.lowTriggered,
+                                    onChanged: (value) => _toggleLow(alert, value),
+                                  ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Preço atual: ${_formatPrice(currentPrice, alert.symbol)}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+
+      // 4. BOTÃO FLUTUANTE DE ADIÇÃO (Só aparece se a lista NÃO estiver vazia)
+      floatingActionButton: alerts.isNotEmpty
+          ? FloatingActionButton(
+              backgroundColor: Colors.blue.shade400,
+              foregroundColor: Colors.white,
+              shape: const CircleBorder(),
+              onPressed: _navigateToCreateAlert,
+              child: const Icon(Icons.add, size: 28),
+            )
+          : null,
+
+      // 5. BARRA DE NAVEGAÇÃO INFERIOR INTEGRADA
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.05), width: 1),
+          ),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: appBgColor,
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+            if (index == 0 && alerts.isEmpty) {
+              _navigateToCreateAlert();
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: Colors.blue.shade400,
+          unselectedItemColor: Colors.white38,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: EdgeInsets.only(bottom: 4.0),
+                child: Icon(Icons.notifications_none_outlined),
+              ),
+              label: 'Alertas',
+            ),
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: EdgeInsets.only(bottom: 4.0),
+                child: Icon(Icons.bar_chart_outlined),
+              ),
+              label: 'Indicadores',
+            ),
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: EdgeInsets.only(bottom: 4.0),
+                child: Icon(Icons.candlestick_chart_outlined),
+              ),
+              label: 'Gráfico',
             ),
           ],
         ),
@@ -307,6 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color iconColor,
     required String title,
     required double price,
+    required String symbol,
     required bool enabled,
     required bool triggered,
     required Function(bool) onChanged,
@@ -315,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: const Color(0xFF0D1424).withOpacity(0.5),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -328,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 2),
-                Text('\$${price.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                Text(_formatPrice(price, symbol), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                 const SizedBox(height: 2),
                 Text(
                   triggered ? '🔔 Disparado' : '⏳ Aguardando',
