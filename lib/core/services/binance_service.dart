@@ -47,4 +47,19 @@ class BinanceService {
       data['priceChangePercent'],
     );
   }
+
+  // =========================
+  // LISTA DE ATIVOS DISPONÍVEIS
+  // =========================
+  Future<List<String>> fetchAvailableSymbols() async {
+    return [
+      'BTCUSDT',
+      'ETHUSDT',
+      'SOLUSDT',
+      'BNBUSDT',
+      'XRPUSDT',
+      'ADAUSDT',
+      'DOGEUSDT',
+    ];
+  }
 }

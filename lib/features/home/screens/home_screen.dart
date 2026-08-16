@@ -7,9 +7,11 @@ import '../../../core/services/notification_service.dart';
 import '../../../core/services/alert_service.dart';
 import '../../../core/services/binance_service.dart';
 import '../../../data/models/alert_model.dart';
+import '../../../routes/app_routes.dart'; // <-- IMPORT DAS ROTAS ADICIONADO
 
 import '../widgets/price_card.dart';
 import '../../alerts/screens/create_alert_screen.dart';
+import 'chart_screen.dart'; // <-- IMPORT DA TELA DE GRÁFICO
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -195,198 +197,217 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ==========================================
+  // VIEW DA ABA DE ALERTAS (SUA TELA ATUAL)
+  // ==========================================
+  Widget _buildAlertsTab() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. CABEÇALHO: Título do App e Ícone de Perfil
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'AlertX Pro',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 30),
+                  onPressed: () {
+                    // NAVEGAÇÃO PARA A TELA DE PERFIL
+                    Navigator.pushNamed(context, AppRoutes.profile);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // 2. IDENTIDADE: Boas-vindas
+            const Text(
+              'Olá,',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 28,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+            const Text(
+              'Erlich Bachman',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Seletor de Ativos
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButton<String>(
+                dropdownColor: const Color(0xFF161F33),
+                value: selectedSymbol,
+                isExpanded: true,
+                underline: const SizedBox(),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                items: symbols.map((symbol) {
+                  return DropdownMenuItem(value: symbol, child: Text(symbol));
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedSymbol = value!;
+                  });
+                  _loadPrice();
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Card de preço real
+            PriceCard(
+              symbol: selectedSymbol,
+              price: currentPrice,
+              dailyChange: dailyChange,
+            ),
+            const SizedBox(height: 16),
+
+            // 3. CONTEÚDO PRINCIPAL (Lista de Alertas ou o Botão Gigante)
+            Expanded(
+              child: alerts.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: _navigateToCreateAlert,
+                            child: Container(
+                              width: 130,
+                              height: 130,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.06),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.04),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.add,
+                                color: Colors.blue.shade400,
+                                size: 55,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Adicionar Novo Alarme',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: alerts.length,
+                      itemBuilder: (_, index) {
+                        final alert = alerts[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.03),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text(alert.symbol, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const Spacer(),
+                                  IconButton(
+                                    onPressed: () => _deleteAlert(index),
+                                    icon: const Icon(Icons.delete_outline, color: Colors.white60),
+                                  ),
+                                ],
+                              ),
+                              const Divider(color: Colors.white10),
+                              if (alert.highPrice != null)
+                                _buildAlertTile(
+                                  icon: Icons.arrow_upward,
+                                  iconColor: Colors.green,
+                                  title: 'Alta',
+                                  price: alert.highPrice!,
+                                  symbol: alert.symbol,
+                                  enabled: alert.highEnabled,
+                                  triggered: alert.highTriggered,
+                                  onChanged: (value) => _toggleHigh(alert, value),
+                                ),
+                              if (alert.lowPrice != null)
+                                _buildAlertTile(
+                                  icon: Icons.arrow_downward,
+                                  iconColor: Colors.red,
+                                  title: 'Baixa',
+                                  price: alert.lowPrice!,
+                                  symbol: alert.symbol,
+                                  enabled: alert.lowEnabled,
+                                  triggered: alert.lowTriggered,
+                                  onChanged: (value) => _toggleLow(alert, value),
+                                ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Preço atual: ${_formatPrice(currentPrice, alert.symbol)}',
+                                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const appBgColor = Color(0xFF0D1424); 
 
     return Scaffold(
       backgroundColor: appBgColor,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. CABEÇALHO: Título do App e Ícone de Perfil
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'AlertX Pro',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 30),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // 2. IDENTIDADE: Boas-vindas
-              const Text(
-                'Olá,',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const Text(
-                'Erlich Bachman',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Seletor de Ativos
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: DropdownButton<String>(
-                  dropdownColor: const Color(0xFF161F33),
-                  value: selectedSymbol,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  items: symbols.map((symbol) {
-                    return DropdownMenuItem(value: symbol, child: Text(symbol));
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedSymbol = value!;
-                    });
-                    _loadPrice();
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Card de preço real
-              PriceCard(
-                symbol: selectedSymbol,
-                price: currentPrice,
-                dailyChange: dailyChange,
-              ),
-              const SizedBox(height: 16),
-
-              // 3. CONTEÚDO PRINCIPAL (Lista de Alertas ou o Botão Gigante)
-              Expanded(
-                child: alerts.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: _navigateToCreateAlert,
-                              child: Container(
-                                width: 130,
-                                height: 130,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.06),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.04),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Icon(
-                                  Icons.add,
-                                  color: Colors.blue.shade400,
-                                  size: 55,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Adicionar Novo Alarme',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: alerts.length,
-                        itemBuilder: (_, index) {
-                          final alert = alerts[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 14),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.03),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(alert.symbol, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                                    const Spacer(),
-                                    IconButton(
-                                      onPressed: () => _deleteAlert(index),
-                                      icon: const Icon(Icons.delete_outline, color: Colors.white60),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(color: Colors.white10),
-                                if (alert.highPrice != null)
-                                  _buildAlertTile(
-                                    icon: Icons.arrow_upward,
-                                    iconColor: Colors.green,
-                                    title: 'Alta',
-                                    price: alert.highPrice!,
-                                    symbol: alert.symbol,
-                                    enabled: alert.highEnabled,
-                                    triggered: alert.highTriggered,
-                                    onChanged: (value) => _toggleHigh(alert, value),
-                                  ),
-                                if (alert.lowPrice != null)
-                                  _buildAlertTile(
-                                    icon: Icons.arrow_downward,
-                                    iconColor: Colors.red,
-                                    title: 'Baixa',
-                                    price: alert.lowPrice!,
-                                    symbol: alert.symbol,
-                                    enabled: alert.lowEnabled,
-                                    triggered: alert.lowTriggered,
-                                    onChanged: (value) => _toggleLow(alert, value),
-                                  ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  'Preço atual: ${_formatPrice(currentPrice, alert.symbol)}',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
+      
+      // INDEXEDSTACK: Troca as telas do menu sem perder o estado
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildAlertsTab(), // Aba 0: Alertas
+          const Center(child: Text('Indicadores', style: TextStyle(color: Colors.white, fontSize: 20))), // Aba 1: Indicadores
+          const ChartScreen(), // Aba 2: Gráfico (A tela nova que criamos)
+        ],
       ),
 
-      // 4. BOTÃO FLUTUANTE DE ADIÇÃO (Só aparece se a lista NÃO estiver vazia)
-      floatingActionButton: alerts.isNotEmpty
+      // BOTÃO FLUTUANTE DE ADIÇÃO (Só aparece na aba 0 de Alertas)
+      floatingActionButton: (_currentIndex == 0 && alerts.isNotEmpty)
           ? FloatingActionButton(
               backgroundColor: Colors.blue.shade400,
               foregroundColor: Colors.white,
@@ -396,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : null,
 
-      // 5. BARRA DE NAVEGAÇÃO INFERIOR INTEGRADA
+      // BARRA DE NAVEGAÇÃO INFERIOR INTEGRADA
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(
@@ -410,9 +431,6 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(() {
               _currentIndex = index;
             });
-            if (index == 0 && alerts.isEmpty) {
-              _navigateToCreateAlert();
-            }
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor: Colors.blue.shade400,
